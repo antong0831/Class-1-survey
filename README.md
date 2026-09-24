@@ -20,7 +20,3 @@ The code prints the survey dimensions, renamed columns, variable types, tables u
 ## Data source
 
 Johnson, K. *Advanced Data Analysis* course repository, `Class 1 Survey Fall 2026.csv`. The course provided the survey for educational analysis. The CSV should be committed as supplied, while all cleaning is performed in code.
-
-## AI assistance
-
-OpenAI. (2026). *ChatGPT (Codex)* [Generative AI tool]. https://chatgpt.com/. ChatGPT assisted with drafting the annotated R Markdown analysis and this README on September 24, 2026. The numerical answers were checked against the course CSV; the student remains responsible for reviewing the final submission.
