@@ -1,0 +1,183 @@
+---
+title: 'Lab: Class One Survey Analysis'
+output:
+  html_document: default
+---
+
+
+### **INSTRUCTIONS**
+#### **Complete all tasks 1-7 using reproducible coding practices (annotation of all code). Use R syntax to solve all problems (i.e. do not manually change values/variables in datasets or check them manually to make sure things are correct except as a double or triple check). Please cut and paste each problem before each R markdown chunk and annotate your code within the chunks.**
+
+
+##### 1. Import class one survey data supplied by the course (https://github.com/kijohnson/Advanced-Data-Analysis) (The dataset is called 'Class 1 Survey Fall 2026.csv'), calling the R dataframe that you create *C1survey*.
+
+```{r task1, message=FALSE}
+# Open the readr library for read_csv(), as demonstrated in the Starbucks demo.
+library(readr)
+
+# Open the dplyr library for data management functions used later in the lab.
+library(dplyr)
+
+# Import the unmodified course CSV from this repository and call it C1survey.
+C1survey <-
+  read_csv(
+    "Class 1 Survey Fall 2026.csv"
+  )
+```
+
+
+##### 2. Determine: **a.** the number of observations (i.e. the number of people who filled out the survey) and **b.** the number of variables in the dataframe.
+
+```{r task2}
+# Use dim(), as in the Starbucks demo, to display the number of rows and columns.
+# The first value is the number of observations and the second is the number of variables.
+dim(C1survey)
+
+# Answer: There are 31 observations and 27 variables in the current course CSV.
+```
+
+
+##### 3. **a.** Rename the column variables to something shorter and that is descriptive of what the variable is about (for example *like_dogs* for the 'Do you like dogs?' question variable) and **b.** Display that they are renamed. **Hints**: You can use either the rename_with function or the names function. The list of names for time is:
+
+```{r task3}
+# Use names(), one of the methods suggested in the question, to rename all
+# variables in the same order as the columns in the original dataframe.
+names(C1survey) <- c(
+  "id", "like_cats", "like_dogs", "have_desert", "slogan", "fav_day",
+  "larkORowl", "fav_food", "fav_drink", "fav_season", "fav_month", "hobby",
+  "program", "specialization", "stat_software", "R_exp", "coding_comfort",
+  "coding_length", "top_three", "public_health_interest", "fav_num", "bday",
+  "bmonth", "country", "state", "city", "highest_educ_level"
+)
+
+# Use colnames(), as in the Starbucks demo, to display the renamed variables.
+colnames(C1survey)
+```
+
+
+##### 4. Write code to determine and display the number of factor, integer, numerical, and character variables there are in the *C1survey* dataset. **Suggestion**: Try to ask ChatGPT for a solution if you are unsure. There is a really short answer to this but we want to see what students come up with!
+
+```{r task4}
+# Apply the class() function to each variable using sapply(), and then use
+# table() to count how many variables belong to each class. These functions
+# were all demonstrated in the Starbucks demo.
+table(sapply(C1survey, class))
+
+# Answer: There are 23 character variables and 4 numerical variables.
+# No factor or integer classes appear in the table, so there are 0 factor
+# variables and 0 integer variables.
+```
+
+
+##### 5. **a.** Using code, check the *bday* and *bmonth* variables for any unusual or missing values (**hint**: use table function). If you find any, **b.** describe what you will do with the unusual values in a comment before or immediately following the code that does it, and **c.** after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics.*
+
+```{r task5}
+# Use table(), as in the Starbucks demo, to inspect all bday and bmonth values.
+# useNA = "always" makes the missing values visible in the tables.
+table(C1survey$bday, useNA = "always")
+table(C1survey$bmonth, useNA = "always")
+
+# The unusual bday values are "30-Nov" and "29-Nov". Use mutate() and
+# if_else(), as demonstrated in the Starbucks demo, to retain their day portions.
+C1survey <- C1survey %>%
+  mutate(bday = if_else(
+    bday == "30-Nov", "30",
+    if_else(bday == "29-Nov", "29", bday)
+  ))
+
+# The unusual bmonth values are May, March, November, and February (which may
+# retain a trailing space depending on how the CSV reader handles whitespace).
+# Use nested if_else() functions to change the written months to their numeric
+# month codes. The genuine missing value is left as NA.
+C1survey <- C1survey %>%
+  mutate(
+    bmonth = if_else(
+      bmonth == "May", "5",
+      if_else(
+        bmonth == "March", "3",
+        if_else(
+          bmonth == "November", "11",
+          if_else(
+            bmonth == "February " | bmonth == "February", "2", bmonth
+          )
+        )
+      )
+    )
+  )
+
+# Convert the cleaned character variables to numeric using as.numeric(), as
+# demonstrated with the calories variable in the Starbucks demo.
+C1survey$bday <- as.numeric(C1survey$bday)
+C1survey$bmonth <- as.numeric(C1survey$bmonth)
+
+# Check the variable classes after conversion.
+class(C1survey$bday)
+class(C1survey$bmonth)
+
+# Display the cleaned values as a final check.
+table(C1survey$bday, useNA = "always")
+table(C1survey$bmonth, useNA = "always")
+
+# Calculate the medians. na.rm = TRUE excludes the genuine missing response.
+median(C1survey$bday, na.rm = TRUE)
+median(C1survey$bmonth, na.rm = TRUE)
+
+# Answer: The median birth day is 17.5 and the median birth month is 8.5.
+```
+
+
+##### 6. **a.** Create a new variable called *bseason* that gives the season according to Northern Meteorological season in which respondents were born (winter = 12/1 to 2/29, spring = 3/1 to 5/31, summer = 6/1 to 8/31, fall = 9/1 to 11/30). **b.** Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct. **c.** Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code.
+
+```{r task6}
+# Create bseason with mutate() and case_when(), following the same method used
+# to categorize calories in the Starbucks demo. Because case_when() checks the
+# conditions in order, months 1-2 become Winter, 3-5 become Spring, 6-8 become
+# Summer, 9-11 become Fall, and month 12 becomes Winter.
+C1survey <- C1survey %>%
+  mutate(
+    bseason = case_when(
+      bmonth <= 2 ~ "Winter",
+      bmonth <= 5 ~ "Spring",
+      bmonth <= 8 ~ "Summer",
+      bmonth <= 11 ~ "Fall",
+      bmonth == 12 ~ "Winter"
+    )
+  )
+
+# Convert bseason into a factor and label the levels in a logical order, using
+# the factor() method demonstrated in the Starbucks demo.
+C1survey$bseason <- factor(
+  C1survey$bseason,
+  levels = c("Winter", "Spring", "Summer", "Fall")
+)
+
+# Check that bseason is now a factor variable.
+class(C1survey$bseason)
+
+# Create a table with birth months in the rows and seasons in the columns.
+# Include missing values so the missing birth month is not hidden.
+season_table <- table(
+  C1survey$bmonth,
+  C1survey$bseason,
+  useNA = "always"
+)
+season_table
+
+# Use the addmargins() function required by the question to sum the columns.
+addmargins(season_table, margin = 1)
+
+# Answer: 5 classmates were born in Winter, 5 in Spring, 5 in Summer,
+# and 15 in Fall. One classmate has a missing birth month and season.
+```
+
+
+##### 7. Pick your favorite variable or variables to analyze, come up with a question you want to answer with that variable or variables, generate the code, and provide an answer to your question. Describe what you did using comments (i.e. #'s).
+
+```{r task7}
+# Question: What is the most common favorite season among classmates?
+# Use table(), as demonstrated in the Starbucks demo, to count the answers.
+table(C1survey$fav_season, useNA = "always")
+
+# Answer: Fall is the most common favorite season. Seventeen classmates selected
+# Fall, compared with 7 for Spring, 3 for Summer, and 4 for Winter.
+```
